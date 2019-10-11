@@ -47,25 +47,25 @@ def weighted_mean_of_data(data_in,data_cond):
 
 def get_filename(var):
     if (str(var).lower()=='sst') or (var==1):
-        file='./data/sst.mnmean.nc'
+        file='./../data/sst.mnmean.nc'
     if (str(var).lower()=='wind') or (var==2):
-        file='./data/wind.mnmean.nc'
+        file='./../data/wind.mnmean.nc'
     if (str(var).lower()=='current') or (var==3):
-        file='./data/cur.mnmean.nc'
+        file='./../data/cur.mnmean.nc'
     if (str(var).lower()=='chl') or (var==4):
-        file='./data/chl.mnmean.nc'
+        file='./../data/chl.mnmean.nc'
     return file
        
 def get_pices_mask():
     import xarray as xr
-    filename = './data/PICES/PICES_all_mask360.nc'
+    filename = './../data/PICES/PICES_all_mask360.nc'
     ds = xr.open_dataset(filename)
     ds.close()
     return ds
 
 def get_lme_mask():
     import xarray as xr
-    filename = './data/LME/LME_all_mask.nc'
+    filename = './../data/LME/LME_all_mask.nc'
     ds = xr.open_dataset(filename)
     ds.close()
     return ds
