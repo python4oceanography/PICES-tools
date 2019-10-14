@@ -11,4 +11,6 @@ dependencies:
   - xarray=0.12.1
   - netcdf4=1.5.1.2
   - dask=1.2.2
+  - seaborn=0.9.0
+  - geopandas=0.5.1
 prefix: C:\Users\gentemann\Miniconda3\envs\tutorialenv
