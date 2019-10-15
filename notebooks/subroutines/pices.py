@@ -75,7 +75,7 @@ def get_pices_data(var, ilme, initial_date,final_date):
     import numpy as np
     
     file = get_filename(var)
-    print('opening:',file)
+    #print('opening:',file)
     ds = xr.open_dataset(file)
     ds.close()
     
