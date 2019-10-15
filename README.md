@@ -1,5 +1,6 @@
 
-# Click here to start Satellite Data Extracting Tool for PICES Regions
+# Click on the button to start 
+# Satellite Data Extracting Tool for PICES Regions
 
 [![Binder](https://binder.pangeo.io/badge_logo.svg)](https://binder.pangeo.io/v2/gh/python4oceanography/PICES-tools/master)
 
