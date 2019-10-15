@@ -1,4 +1,4 @@
-# Satellite Data Extracting Tool for PICES Regions
+# PICES Regional Ecosystem Tool
 ## Click on the launch binder button to start
 
 [![Binder](https://binder.pangeo.io/badge_logo.svg)](https://binder.pangeo.io/v2/gh/python4oceanography/PICES-tools/master)
