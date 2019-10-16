@@ -306,7 +306,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svarv+' anomalies')
         plt.autoscale(enable=True, axis='x', tight=True)
         #save anomalies
-        plt.savefig('./user_data_figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
+        plt.savefig('./User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
         plt.tight_layout()
         plt.show()
         print('Anomalies calculated based on the entire data period')
