@@ -75,9 +75,8 @@ def get_pices_data(var, ilme, initial_date,final_date):
     import numpy as np
     import os
     
-    print(var)
     file = get_filename(var)
-    print('opening:',file)
+    #print('opening:',file)
     #print(os.getcwd())
     ds = xr.open_dataset(file)
     ds.close()
@@ -147,7 +146,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
     import warnings
     warnings.simplefilter('ignore') # filter some warning messages
     lmenames = ['California Current','Gulf of Alaska','East Bering Sea','North Bering Sea','Aleutian Islands','West Bering Sea',
-            'Sea of Okhotsk','Oyashio Current','Sea of Japan','Yellow Sea','East China Sea','Kuroshio Current',
+            'Sea of Okhotsk','Oyashio Current','R19','Yellow Sea','East China Sea','Kuroshio Current',
             'West North Pacific','East North Pacific']
 
     # check values
