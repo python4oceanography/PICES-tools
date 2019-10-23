@@ -1,6 +1,7 @@
 # PICES Regional Ecosystem Tool
 ## Click on the launch binder button to start
 
+### testing pangeo binder deployment
 [![Binder](https://binder.pangeo.io/badge_logo.svg)](https://binder.pangeo.io/v2/gh/python4oceanography/PICES-tools/master)
 
 ### testing mybinder deployment
