@@ -47,25 +47,25 @@ def weighted_mean_of_data(data_in,data_cond):
 
 def get_filename(var):
     if (str(var).lower()=='sst') or (var==1):
-        file='./utils/data/sst.mnmean.nc'
+        file='/home/jovyan/utils/data/sst.mnmean.nc'
     if (str(var).lower()=='wind') or (var==2):
-        file='./utils/data/wind.mnmean.nc'
+        file='/home/jovyan/utils/data/wind.mnmean.nc'
     if (str(var).lower()=='current') or (var==3):
-        file='./utils/data/cur.mnmean.nc'
+        file='/home/jovyan/utils/data/cur.mnmean.nc'
     if (str(var).lower()=='chl') or (var==4):
-        file='./utils/data/chl.mnmean.nc'
+        file='/home/jovyan/utils/data/chl.mnmean.nc'
     return file
        
 def get_pices_mask():
     import xarray as xr
-    filename = './utils/data/PICES/PICES_all_mask360.nc'
+    filename = '/home/jovyan/utils/data/PICES/PICES_all_mask360.nc'
     ds = xr.open_dataset(filename)
     ds.close()
     return ds
 
 def get_lme_mask():
     import xarray as xr
-    filename = './utils/data/LME/LME_all_mask.nc'
+    filename = '/home/jovyan/utils/data/LME/LME_all_mask.nc'
     ds = xr.open_dataset(filename)
     ds.close()
     return ds
@@ -137,7 +137,7 @@ def get_lme_data(var, ilme, initial_date,final_date):
 def analyze_PICES_Region(region,var,initial_date,final_date):
       
     import sys
-    sys.path.append('./utils/subroutines/')
+    sys.path.append('/home/jovyan/utils/subroutines/')
     from pices import get_pices_data
     import numpy as np
     import pandas as pd
@@ -211,6 +211,8 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.legend(loc=0,fontsize='small')
         plt.autoscale(enable=True, axis='x', tight=True)
         plt.show()
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
+
         
         # display climatology
         plt.figure(figsize=(10,4))
@@ -232,7 +234,8 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
             plt.axhline(color='k',zorder=0)
         plt.tight_layout()
         plt.show()
-    
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
+        
         ## display statistics
         print('\nMean '+svaru+' value = ', round(dtmean[nvaru].values.mean(),2),units)
         print('Median '+svaru+' value = ', round(np.median(dtmean[nvaru].values),2),units)
@@ -284,6 +287,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.xlabel(svarv+' ('+units+')')
         plt.tight_layout()
         plt.show()
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
         
         # display anomalies
         plt.figure(figsize=(12,8),dpi=180)
@@ -308,7 +312,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svarv+' anomalies')
         plt.autoscale(enable=True, axis='x', tight=True)
         #save anomalies
-        plt.savefig('./User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
         plt.tight_layout()
         plt.show()
         print('Anomalies calculated based on the entire data period')
@@ -316,7 +320,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
          # build data set and save
         dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svaru:dtanom[nvaru].values,svarv:dtanom[nvarv].values}
         df = pd.DataFrame(data=dta)
-        df.to_csv('./User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
+        df.to_csv('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
         
     ## SST and Chl
     else:
@@ -351,6 +355,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         if (np.sign(dtmean[nvar].min())!=np.sign(dtmean[nvar].max())):
             plt.axhline(color='k',zorder=0)
         plt.show()
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
 
         # display climatology
         plt.figure(figsize=(5,4))
@@ -362,6 +367,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         if (np.sign(dtclim[nvar].min())!=np.sign(dtclim[nvar].max())):
             plt.axhline(color='k',zorder=0)
         plt.show()
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
 
         ## display statistics
         print('\nMean '+svar+' value = ', round(dtmean[nvar].values.mean(),2),units)
@@ -389,6 +395,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.grid(True)
         plt.xlabel(svar+' ('+units+')')
         plt.show()
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
 
         # display anomalies
         plt.figure(figsize=(12,4),dpi=180)
@@ -402,12 +409,12 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svar+' anomalies')
         plt.autoscale(enable=True, axis='x', tight=True)
         # save anomalies
-        plt.savefig('./User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
+        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
         plt.show()
         print('Anomalies calculated based on the entire data period')
         
         # build data set and save
         dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svar:dtanom[nvar].values}
         df = pd.DataFrame(data=dta)
-        df.to_csv('./User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
+        df.to_csv('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
         
