@@ -210,8 +210,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svar+' values')
         plt.legend(loc=0,fontsize='small')
         plt.autoscale(enable=True, axis='x', tight=True)
-        plt.show()
         plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
 
         
         # display climatology
@@ -233,8 +234,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         if (np.sign(dtclim[nvarv].min())!=np.sign(dtclim[nvarv].max())):
             plt.axhline(color='k',zorder=0)
         plt.tight_layout()
-        plt.show()
         plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
         
         ## display statistics
         print('\nMean '+svaru+' value = ', round(dtmean[nvaru].values.mean(),2),units)
@@ -286,8 +288,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.grid(True)
         plt.xlabel(svarv+' ('+units+')')
         plt.tight_layout()
-        plt.show()
         plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
         
         # display anomalies
         plt.figure(figsize=(12,8),dpi=180)
@@ -354,8 +357,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.autoscale(enable=True, axis='x', tight=True)
         if (np.sign(dtmean[nvar].min())!=np.sign(dtmean[nvar].max())):
             plt.axhline(color='k',zorder=0)
-        plt.show()
         plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
 
         # display climatology
         plt.figure(figsize=(5,4))
@@ -366,8 +370,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svar+' climatology')
         if (np.sign(dtclim[nvar].min())!=np.sign(dtclim[nvar].max())):
             plt.axhline(color='k',zorder=0)
-        plt.show()
         plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
 
         ## display statistics
         print('\nMean '+svar+' value = ', round(dtmean[nvar].values.mean(),2),units)
@@ -394,8 +399,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(svar+' anomalies density plot')
         plt.grid(True)
         plt.xlabel(svar+' ('+units+')')
-        plt.show()
         plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
 
         # display anomalies
         plt.figure(figsize=(12,4),dpi=180)
