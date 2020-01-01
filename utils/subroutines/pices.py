@@ -46,26 +46,39 @@ def weighted_mean_of_data(data_in,data_cond):
 
 
 def get_filename(var):
-    if (str(var).lower()=='sst') or (var==1):
-        file='/home/jovyan/utils/data/sst.mnmean.nc'
-    if (str(var).lower()=='wind') or (var==2):
-        file='/home/jovyan/utils/data/wind.mnmean.nc'
-    if (str(var).lower()=='current') or (var==3):
-        file='/home/jovyan/utils/data/cur.mnmean.nc'
-    if (str(var).lower()=='chl') or (var==4):
-        file='/home/jovyan/utils/data/chl.mnmean.nc'
+    import os
+    home_dir=os.getcwd()
+    var=str(var).lower()
+    if (var=='sst') or (var==1):
+        file=home_dir+'/utils/data/sst.mnmean.nc'
+    if (var=='wind') or (var==2):
+        file=home_dir+'/utils/data/wind.mnmean.nc'
+    if (var=='current') or (var==3):
+        file=home_dir+'/utils/data/cur.mnmean_aviso.nc'
+    if (var=='chl') or (var==4):
+        file=home_dir+'/utils/data/chl.mnmean.nc'
+    if (var=='sla') or (var==5):
+        file=home_dir+'/utils/data/sla.mnmean_aviso.nc'
+    if (var=='adt') or (var==6):
+        file=home_dir+'/utils/data/adt.mnmean_aviso.nc'
+    if (var=='current_oscar') or (var==7):
+        file=home_dir+'/utils/data/cur.mnmean.nc'
     return file
        
 def get_pices_mask():
     import xarray as xr
-    filename = '/home/jovyan/utils/data/PICES/PICES_all_mask360.nc'
+    import os
+    home_dir=os.getcwd()
+    filename = home_dir+'/utils/data/PICES/PICES_all_mask360.nc'
     ds = xr.open_dataset(filename)
     ds.close()
     return ds
 
 def get_lme_mask():
     import xarray as xr
-    filename = '/home/jovyan/utils/data/LME/LME_all_mask.nc'
+    import os
+    home_dir=os.getcwd()
+    filename = home_dir+'/utils/data/LME/LME_all_mask.nc'
     ds = xr.open_dataset(filename)
     ds.close()
     return ds
@@ -74,17 +87,32 @@ def get_pices_data(var, ilme, initial_date,final_date):
     import xarray as xr
     import numpy as np
     import os
-    
+   
+    #read in mask from aviso data
+    file = get_filename('current')
+    ds_aviso = xr.open_dataset(file)
+    ds_aviso.close()
+
     file = get_filename(var)
     #print('opening:',file)
     #print(os.getcwd())
     ds = xr.open_dataset(file)
     ds.close()
-    
+   
+    #apply aviso mask
+    ds_aviso2 = ds_aviso.interp(lat=ds.lat,lon=ds.lon)
+    for key in ds.data_vars:
+        ds[key]=ds[key].where(np.isfinite(ds_aviso2.u[0,:,:]))
+
     #subset to time of interest
     ds = ds.sel(time=slice(initial_date,final_date))   
     
-    if (str(var).lower()=='current') or (var==3):  #if current data need to mask
+#    if (str(var).lower()=='current') or (var==3):  #if current data need to mask
+#        m=ds.mask.sel(time=slice(initial_date,final_date)).min('time')
+#        ds = ds.where(m==1,np.nan)
+        #ds = ds.drop('mask')
+
+    if (str(var).lower()=='current_oscar') or (var==7):  #if current data need to mask
         m=ds.mask.sel(time=slice(initial_date,final_date)).min('time')
         ds = ds.where(m==1,np.nan)
         ds = ds.drop('mask')
@@ -137,7 +165,10 @@ def get_lme_data(var, ilme, initial_date,final_date):
 def analyze_PICES_Region(region,var,initial_date,final_date):
       
     import sys
-    sys.path.append('/home/jovyan/utils/subroutines/')
+    import os
+    home_dir=os.getcwd()
+    sys.path.append(home_dir+'/utils/subroutines/')
+#    sys.path.append('/home/jovyan/utils/subroutines/')
     from pices import get_pices_data
     import numpy as np
     import pandas as pd
@@ -159,12 +190,17 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
     # data aquisition
     dtmean, dtclim, dtanom = get_pices_data(var, lmei, initial_date, final_date)
     
-    # extract and assign data
+#    if var=='current':
+#        dtmean=dtmean.drop({'sla','adt'})
+#        dtclim=dtclim.drop({'sla','adt'})
+#        dtanom=dtanom.drop({'sla','adt'})
+
+            # extract and assign data
     allvars = dtmean.data_vars
     
     ## wind and currents
-    if (var=='wind') or (var=='current'):
-        
+    if (var=='wind') or (var=='current') or (var=='current_oscar'):       
+
         # name in dataset
         ok = 0
         for key,val in allvars.items():
@@ -176,7 +212,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         
         # short and long name for variable
         svar = var.lower().capitalize()
-        if var == 'wind':
+        if (var == 'wind') or (var == 'current'):
             datasetname = dtmean.attrs['title']
         else:
             datasetname = dtmean.attrs['description']
@@ -210,7 +246,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svar+' values')
         plt.legend(loc=0,fontsize='small')
         plt.autoscale(enable=True, axis='x', tight=True)
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
         plt.show()
         
 
@@ -234,7 +270,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         if (np.sign(dtclim[nvarv].min())!=np.sign(dtclim[nvarv].max())):
             plt.axhline(color='k',zorder=0)
         plt.tight_layout()
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
         plt.show()
         
         
@@ -288,7 +324,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.grid(True)
         plt.xlabel(svarv+' ('+units+')')
         plt.tight_layout()
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
         plt.show()
         
         
@@ -315,7 +351,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svarv+' anomalies')
         plt.autoscale(enable=True, axis='x', tight=True)
         #save anomalies
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
         plt.tight_layout()
         plt.show()
         print('Anomalies calculated based on the entire data period')
@@ -323,7 +359,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
          # build data set and save
         dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svaru:dtanom[nvaru].values,svarv:dtanom[nvarv].values}
         df = pd.DataFrame(data=dta)
-        df.to_csv('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
+        df.to_csv(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
         
     ## SST and Chl
     else:
@@ -332,7 +368,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
             nvar = key
         # short and long name for variable
         svar = var.upper()
-        if svar=='SST':
+        if (svar=='SST') or (svar=='SLA') or (svar=='ADT'):
             lvar = dtmean[nvar].attrs['long_name']
         elif svar=='CHL':
             lvar = dtmean.attrs['parameter']
@@ -357,7 +393,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.autoscale(enable=True, axis='x', tight=True)
         if (np.sign(dtmean[nvar].min())!=np.sign(dtmean[nvar].max())):
             plt.axhline(color='k',zorder=0)
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
         plt.show()
         
 
@@ -370,7 +406,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svar+' climatology')
         if (np.sign(dtclim[nvar].min())!=np.sign(dtclim[nvar].max())):
             plt.axhline(color='k',zorder=0)
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
         plt.show()
         
 
@@ -399,7 +435,7 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(svar+' anomalies density plot')
         plt.grid(True)
         plt.xlabel(svar+' ('+units+')')
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
         plt.show()
         
 
@@ -415,12 +451,12 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
         plt.title(lmename+' '+svar+' anomalies')
         plt.autoscale(enable=True, axis='x', tight=True)
         # save anomalies
-        plt.savefig('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
         plt.show()
         print('Anomalies calculated based on the entire data period')
         
         # build data set and save
         dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svar:dtanom[nvar].values}
         df = pd.DataFrame(data=dta)
-        df.to_csv('/home/jovyan/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
+        df.to_csv(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
         
