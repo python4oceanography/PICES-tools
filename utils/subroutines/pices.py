@@ -49,6 +49,7 @@ def get_filename(var):
     import os
     home_dir=os.getcwd()
     var=str(var).lower()
+    
     if (var=='sst') or (var==1):
         file=home_dir+'/utils/data/sst.mnmean.nc'
     if (var=='wind') or (var==2):
@@ -61,8 +62,8 @@ def get_filename(var):
         file=home_dir+'/utils/data/sla.mnmean_aviso.nc'
     if (var=='adt') or (var==6):
         file=home_dir+'/utils/data/adt.mnmean_aviso.nc'
-    if (var=='current_oscar') or (var==7):
-        file=home_dir+'/utils/data/cur.mnmean.nc'
+    #if (var=='current_oscar') or (var==7):
+     #   file=home_dir+'/utils/data/cur.mnmean.nc'
     return file
        
 def get_pices_mask():
@@ -88,34 +89,30 @@ def get_pices_data(var, ilme, initial_date,final_date):
     import numpy as np
     import os
    
-    #read in mask from aviso data
-    file = get_filename('current')
-    ds_aviso = xr.open_dataset(file)
-    ds_aviso.close()
-
+    if 'current' in var:
+        var='current'
+    elif 'wind' in var:
+        var='wind'
+    
     file = get_filename(var)
     #print('opening:',file)
     #print(os.getcwd())
     ds = xr.open_dataset(file)
     ds.close()
-   
-    #apply aviso mask
-    ds_aviso2 = ds_aviso.interp(lat=ds.lat,lon=ds.lon)
-    for key in ds.data_vars:
-        ds[key]=ds[key].where(np.isfinite(ds_aviso2.u[0,:,:]))
+    
+    if (var=='current') :
+        #read in mask from aviso data (to all? or just to currents?)
+        file = get_filename(var)
+        ds_aviso = xr.open_dataset(file)
+        ds_aviso.close()
+        
+        #apply aviso mask
+        ds_aviso2 = ds_aviso.interp(lat=ds.lat,lon=ds.lon)
+        for key in ds.data_vars:
+            ds[key]=ds[key].where(np.isfinite(ds_aviso2.u[0,:,:]))
 
     #subset to time of interest
     ds = ds.sel(time=slice(initial_date,final_date))   
-    
-#    if (str(var).lower()=='current') or (var==3):  #if current data need to mask
-#        m=ds.mask.sel(time=slice(initial_date,final_date)).min('time')
-#        ds = ds.where(m==1,np.nan)
-        #ds = ds.drop('mask')
-
-    if (str(var).lower()=='current_oscar') or (var==7):  #if current data need to mask
-        m=ds.mask.sel(time=slice(initial_date,final_date)).min('time')
-        ds = ds.where(m==1,np.nan)
-        ds = ds.drop('mask')
        
     #read in pices LME mask
     ds_mask = get_pices_mask()
@@ -162,8 +159,156 @@ def get_lme_data(var, ilme, initial_date,final_date):
 
     return data_mean, data_climatology, data_anomaly
 
+def select_propervar(dtmean, dtclim, dtanom, var):
+    import numpy as np
+    if (var=='wind_v'):
+        dtmean=dtmean.drop('u_mean')
+        dtmean=dtmean.rename({'v_mean':'wind_v'})
+        dtclim=dtclim.drop('u_mean')
+        dtclim=dtclim.rename({'v_mean':'wind_v'})
+        dtanom=dtanom.drop('u_mean')
+        dtanom=dtanom.rename({'v_mean':'wind_v'})
+    elif (var=='wind_u'):
+        dtmean=dtmean.drop('v_mean')
+        dtmean=dtmean.rename({'u_mean':'wind_u'})
+        dtclim=dtclim.drop('v_mean')
+        dtclim=dtclim.rename({'u_mean':'wind_u'})
+        dtanom=dtanom.drop('v_mean')
+        dtanom=dtanom.rename({'u_mean':'wind_u'})
+    elif (var=='wind_speed'):
+        dtmean['wind_speed']=np.sqrt(dtmean.v_mean**2+dtmean.u_mean**2)
+        dtclim['wind_speed']=np.sqrt(dtclim.v_mean**2+dtclim.u_mean**2)
+        dtanom['wind_speed']=dtmean['wind_speed'].groupby('time.month')-dtclim['wind_speed']  
+        dtmean=dtmean.drop('u_mean')
+        dtclim=dtclim.drop('u_mean')
+        dtanom=dtanom.drop('u_mean')
+        dtmean=dtmean.drop('v_mean')
+        dtclim=dtclim.drop('v_mean')
+        dtanom=dtanom.drop('v_mean')
+    elif (var=='current_v'):
+        dtmean=dtmean.drop('u')
+        dtmean=dtmean.rename({'v':'current_v'})
+        dtclim=dtclim.drop('u')
+        dtclim=dtclim.rename({'v':'current_v'})
+        dtanom=dtanom.drop('u')
+        dtanom=dtanom.rename({'v':'current_v'})
+    elif (var=='current_u'):
+        dtmean=dtmean.drop('v')
+        dtmean=dtmean.rename({'u':'current_u'})
+        dtclim=dtclim.drop('v')
+        dtclim=dtclim.rename({'u':'current_u'})
+        dtanom=dtanom.drop('v')
+        dtanom=dtanom.rename({'u':'current_u'})
+    elif (var=='current_speed'):
+        dtmean['current_speed']=np.sqrt(dtmean.v**2+dtmean.u**2)
+        dtclim['current_speed']=np.sqrt(dtclim.v**2+dtclim.u**2)
+        dtanom['current_speed']=dtmean['current_speed'].groupby('time.month')-dtclim['current_speed']  
+        dtmean=dtmean.drop('u')
+        dtclim=dtclim.drop('u')
+        dtanom=dtanom.drop('u')
+        dtmean=dtmean.drop('v')
+        dtclim=dtclim.drop('v')
+        dtanom=dtanom.drop('v')
+    return dtmean, dtclim, dtanom
+
+def print_var_info(dtmean, var, lmei, lmename, initial_date, final_date):
+    # short and long name for variable
+    svar = var.upper()
+    if (svar=='SST') or (svar=='SLA') or (svar=='ADT'):
+        lvar = dtmean.attrs['long_name']
+        units = dtmean.attrs['units']    
+    elif svar=='CHL':
+        lvar = dtmean.attrs['parameter']
+        units = dtmean.attrs['units']    
+    else:
+        lvar = svar.replace('_',' ')
+        svar = lvar
+        units='m/s'
+        
+    datasetname = dtmean.attrs['title']   
+
+    ## Data information
+    print('\n\nRegion = '+str(lmei)+' - '+lmename)
+    print('Data = '+lvar)
+    print('Units = '+units)
+    print('Period = '+initial_date+' : '+final_date)
+    print('Dataset = '+datasetname)
+    
+    return svar, units
+
+
+def make_plot(plot_type, ds, ds2, var, svar, units, lmei, lmename, initial_date, final_date):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import seaborn as sns
+    import os
+    home_dir=os.getcwd()
+    
+    if plot_type == 'timeseries':
+        plt.figure(figsize=(10,4))
+        plt.plot(ds.time,ds[var])
+        plt.grid(True)
+        plt.ylabel(svar+' ('+units+')')
+        plt.title(lmename+' '+svar+' values')
+        plt.autoscale(enable=True, axis='x', tight=True)
+        if (np.sign(ds.min())!=np.sign(ds.max())):
+            plt.axhline(color='k',zorder=0)
+            plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+
+                        str(lmei)+'_'+svar+'_timeseries_'+
+                        initial_date+'_'+final_date+'.png')
+        plt.show()
+                 
+    elif plot_type == 'climatology':
+        plt.figure(figsize=(5,4))
+        plt.plot(ds.month, ds[var],'+-',color='k')
+        plt.grid(True)
+        plt.ylabel(svar+' ('+units+')')
+        plt.xticks(range(1,13),
+               ['Jan','Feb','Mar','Apr','May','Jun',
+                'Jul','Aug','Sep','Oct','Nov','Dec'],
+                rotation=45)
+        plt.title(lmename+' '+svar+' climatology')
+        if (np.sign(ds[var].min())!=np.sign(ds[var].max())):
+            plt.axhline(color='k',zorder=0)
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
+    elif plot_type =='density':
+        plt.figure(figsize=(10,4))
+        plt.subplot(1,2,1)
+        sns.distplot(ds[var], hist=True, kde=True, bins=30,
+                     kde_kws={'linewidth': 2})
+        plt.title(svar+' values density plot')
+        plt.grid(True)
+        plt.xlabel(svar+' ('+units+')')
+        plt.subplot(1,2,2)
+        sns.distplot(ds2[var], hist=True, kde=True, bins=30,
+                     kde_kws={'linewidth': 2})
+        plt.title(svar+' anomalies density plot')
+        plt.grid(True)
+        plt.xlabel(svar+' ('+units+')')
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
+        plt.show()
+        
+    elif plot_type == 'anomalies':
+        plt.figure(figsize=(12,4),dpi=180)
+        p=ds.where(ds>=0)
+        n=ds.where(ds<0)
+        plt.bar(p.time.values,p[var], width=30, color='darkred',alpha=0.8, edgecolor=None,zorder=2)
+        plt.bar(n.time.values,n[var], width=30, color='darkblue',alpha=0.8, edgecolor=None,zorder=3)
+        plt.grid(True,zorder=1)
+        plt.axhline(color='k',zorder=0)
+        plt.ylabel(svar+' ('+units+')')
+        plt.title(lmename+' '+svar+' anomalies')
+        plt.autoscale(enable=True, axis='x', tight=True)
+        # save anomalies
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+
+                    str(lmei)+'_'+svar+'_anomalies_'+initial_date+
+                    '_'+final_date+'.png')
+        plt.show()
+        print('Anomalies calculated based on the entire data period')
+        
 def analyze_PICES_Region(region,var,initial_date,final_date):
-      
     import sys
     import os
     home_dir=os.getcwd()
@@ -172,16 +317,14 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
     from pices import get_pices_data
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
-    import seaborn as sns
     import warnings
     warnings.simplefilter('ignore') # filter some warning messages
-    lmenames = ['California Current','Gulf of Alaska','East Bering Sea','North Bering Sea','Aleutian Islands','West Bering Sea',
-            'Sea of Okhotsk','Oyashio Current','R19','Yellow Sea','East China Sea','Kuroshio Current',
-            'West North Pacific','East North Pacific']
+    lmenames = ['California Current','Gulf of Alaska','East Bering Sea',
+                'North Bering Sea','Aleutian Islands','West Bering Sea',
+                'Sea of Okhotsk','Oyashio Current','R19','Yellow Sea',
+                'East China Sea','Kuroshio Current',
+                'West North Pacific','East North Pacific']
 
-    # check values
-    
     # assign variables
     lmei = region
     lmename = lmenames[lmei-11]
@@ -189,274 +332,41 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
 
     # data aquisition
     dtmean, dtclim, dtanom = get_pices_data(var, lmei, initial_date, final_date)
+    #print(dtmean)
     
-#    if var=='current':
-#        dtmean=dtmean.drop({'sla','adt'})
-#        dtclim=dtclim.drop({'sla','adt'})
-#        dtanom=dtanom.drop({'sla','adt'})
-
-            # extract and assign data
-    allvars = dtmean.data_vars
+    # extract and assign data
+    if ('wind' in var) or ('current' in var):
+        # isolate the proper variable
+        dtmean, dtclim, dtanom = select_propervar(dtmean, dtclim, dtanom, var)
     
-    ## wind and currents
-    if (var=='wind') or (var=='current') or (var=='current_oscar'):       
+    # print information
+    svar, units = print_var_info(dtmean, var, lmei, lmename, initial_date, final_date)
 
-        # name in dataset
-        ok = 0
-        for key,val in allvars.items():
-            if ok==0:
-                nvaru = key  
-                ok += 1
-            else:
-                nvarv = key
-        
-        # short and long name for variable
-        svar = var.lower().capitalize()
-        if (var == 'wind') or (var == 'current'):
-            datasetname = dtmean.attrs['title']
-        else:
-            datasetname = dtmean.attrs['description']
-        units = dtmean[nvaru].attrs['units']
-        lvaru = dtmean[nvaru].attrs['long_name']
-        lvarv = dtmean[nvarv].attrs['long_name']
-        svaru = var.capitalize() +'_U'
-        svarv = var.capitalize() +'_V'
-            
-        ## Data information
-        print('\n\nRegion = '+str(lmei)+' - '+lmename)
-        print('Data = '+lvaru)
-        print('Data = '+lvarv)
-        print('Units = '+units)
-        print('Period = '+initial_date+' : '+final_date)
-        print('Dataset = '+datasetname)
-        if var=='wind':
-            act='blowing'
-        else:
-            act='flowing'
-        print('\nNote: Sign indicates where the '+svar+' is '+act+' towards to\n')
+    # displaying time series data
+    make_plot('timeseries', dtmean, dtanom, var, svar, units, lmei, lmename, initial_date, final_date)
 
-        # displaying time series data
-        plt.figure(figsize=(10,4))
-        plt.plot(dtmean.time,dtmean[nvaru],label=svaru, alpha=0.8)
-        plt.plot(dtmean.time,dtmean[nvarv],label=svarv, alpha=0.8)
-        if (np.sign(dtmean[nvaru].min())!=np.sign(dtmean[nvaru].max())) or (np.sign(dtmean[nvarv].min())!=np.sign(dtmean[nvarv].max())):
-            plt.axhline(color='k',zorder=0)
-        plt.grid(True)
-        plt.ylabel(svar+' ('+units+')')
-        plt.title(lmename+' '+svar+' values')
-        plt.legend(loc=0,fontsize='small')
-        plt.autoscale(enable=True, axis='x', tight=True)
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        
+    # display climatology
+    make_plot('climatology', dtclim, dtanom, var, svar, units, lmei, lmename, initial_date, final_date)
+    
+    ## display statistics
+    print('\nMean '+svar+' value = ', round(dtmean[var].values.mean(),2),units)
+    print('Median '+svar+' value = ', round(np.median(dtmean[var].values),2),units)
+    print(svar+' Standard deviation = ', round(dtmean[var].values.std(),2),units)
+    print('\n')
+    print('Maximum '+svar+' value = ', round(dtmean[var].values.max(),2),units)
+    print('Minimum '+svar+' value = ', round(dtmean[var].values.min(),2),units)
+    print('\n')
+    print('Maximum '+svar+' anomalies value = ', round(dtanom[var].values.max(),2),units)
+    print('Minimum '+svar+' anomalies value = ', round(dtanom[var].values.min(),2),units)
 
-        
-        # display climatology
-        plt.figure(figsize=(10,4))
-        plt.subplot(1,2,1)
-        plt.stem(dtclim.month, dtclim[nvaru],markerfmt='d')
-        plt.grid(True)
-        plt.ylabel(svaru+' ('+units+')')
-        plt.xticks(range(1,13),['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],rotation=45)
-        plt.title(lmename+' '+svaru+' climatology')
-        if (np.sign(dtclim[nvaru].min())!=np.sign(dtclim[nvaru].max())):
-            plt.axhline(color='k',zorder=0)
-        plt.subplot(1,2,2)
-        plt.stem(dtclim.month, dtclim[nvarv],markerfmt='d')
-        plt.grid(True)
-        plt.ylabel(svarv+' ('+units+')')
-        plt.xticks(range(1,13),['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],rotation=45)
-        plt.title(lmename+' '+svarv+' climatology')
-        if (np.sign(dtclim[nvarv].min())!=np.sign(dtclim[nvarv].max())):
-            plt.axhline(color='k',zorder=0)
-        plt.tight_layout()
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        
-        
-        ## display statistics
-        print('\nMean '+svaru+' value = ', round(dtmean[nvaru].values.mean(),2),units)
-        print('Median '+svaru+' value = ', round(np.median(dtmean[nvaru].values),2),units)
-        print(svaru+' Standard deviation = ', round(dtmean[nvaru].values.std(),2),units)
-        print('\n')
-        print('Maximum '+svaru+' value = ', round(dtmean[nvaru].values.max(),2),units)
-        print('Minimum '+svaru+' value = ', round(dtmean[nvaru].values.min(),2),units)
-        print('\n')
-        print('Maximum '+svaru+' anomalies value = ', round(dtanom[nvaru].values.max(),2),units)
-        print('Minimum '+svaru+' anomalies value = ', round(dtanom[nvaru].values.min(),2),units)
+    # display density plots
+    make_plot('density',dtmean, dtanom, var, svar, units, lmei, lmename, initial_date, final_date)
 
-        ## display statistics
-        print('\n\nMean '+svarv+' value = ', round(dtmean[nvarv].values.mean(),2),units)
-        print('Median '+svarv+' value = ', round(np.median(dtmean[nvarv].values),2),units)
-        print(svarv+' Standard deviation = ', round(dtmean[nvarv].values.std(),2),units)
-        print('\n')
-        print('Maximum '+svarv+' value = ', round(dtmean[nvarv].values.max(),2),units)
-        print('Minimum '+svarv+' value = ', round(dtmean[nvarv].values.min(),2),units)
-        print('\n')
-        print('Maximum '+svarv+' anomalies value = ', round(dtanom[nvarv].values.max(),2),units)
-        print('Minimum '+svarv+' anomalies value = ', round(dtanom[nvarv].values.min(),2),units)
+    # display anomalies
+    make_plot('anomalies',dtanom, dtanom, var, svar, units, lmei, lmename, initial_date, final_date)
 
-        # display density plots
-        plt.figure(figsize=(10,9))
-        plt.subplot(2,2,1)
-        sns.distplot(dtmean[nvaru], hist=True, kde=True, bins=30,
-                     kde_kws={'linewidth': 2})
-        plt.title(svaru+' values density plot')
-        plt.grid(True)
-        plt.xlabel(svaru+' ('+units+')')
-        plt.subplot(2,2,2)
-        sns.distplot(dtanom[nvaru], hist=True, kde=True, bins=30,
-                     kde_kws={'linewidth': 2})
-        plt.title(svaru+' anomalies density plot')
-        plt.grid(True)
-        plt.xlabel(svaru+' ('+units+')')
-        
-        plt.subplot(2,2,3)
-        sns.distplot(dtmean[nvarv], hist=True, kde=True, bins=30,
-                     kde_kws={'linewidth': 2})
-        plt.title(svarv+' values density plot')
-        plt.grid(True)
-        plt.xlabel(svarv+' ('+units+')')
-        plt.subplot(2,2,4)
-        sns.distplot(dtanom[nvarv], hist=True, kde=True, bins=30,
-                     kde_kws={'linewidth': 2})
-        plt.title(svarv+' anomalies density plot')
-        plt.grid(True)
-        plt.xlabel(svarv+' ('+units+')')
-        plt.tight_layout()
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        
-        
-        # display anomalies
-        plt.figure(figsize=(12,8),dpi=180)
-        plt.subplot(2,1,1)
-        p=dtanom.where(dtanom[nvaru]>=0)
-        n=dtanom.where(dtanom[nvaru]<0)
-        plt.bar(p.time.values,p[nvaru], width=30, color='darkred',alpha=0.8, edgecolor=None,zorder=2)
-        plt.bar(n.time.values,n[nvaru], width=30, color='darkblue',alpha=0.8, edgecolor=None,zorder=3)
-        plt.grid(True,zorder=1)
-        plt.ylabel(svaru+' ('+units+')')
-        plt.title(lmename+' '+svaru+' anomalies')
-        plt.autoscale(enable=True, axis='x', tight=True)
-        plt.axhline(color='k',zorder=1)
-        plt.subplot(2,1,2)
-        p=dtanom.where(dtanom[nvarv]>=0)
-        n=dtanom.where(dtanom[nvarv]<0)
-        plt.bar(p.time.values,p[nvarv], width=30, color='darkred',alpha=0.8, edgecolor=None,zorder=2)
-        plt.bar(n.time.values,n[nvarv], width=30, color='darkblue',alpha=0.8, edgecolor=None,zorder=3)
-        plt.grid(True,zorder=1)
-        plt.axhline(color='k',zorder=1)
-        plt.ylabel(svarv+' ('+units+')')
-        plt.title(lmename+' '+svarv+' anomalies')
-        plt.autoscale(enable=True, axis='x', tight=True)
-        #save anomalies
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
-        plt.tight_layout()
-        plt.show()
-        print('Anomalies calculated based on the entire data period')
-        
-         # build data set and save
-        dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svaru:dtanom[nvaru].values,svarv:dtanom[nvarv].values}
-        df = pd.DataFrame(data=dta)
-        df.to_csv(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
-        
-    ## SST and Chl
-    else:
-        # name in dataset
-        for key,val in allvars.items():
-            nvar = key
-        # short and long name for variable
-        svar = var.upper()
-        if (svar=='SST') or (svar=='SLA') or (svar=='ADT'):
-            lvar = dtmean[nvar].attrs['long_name']
-        elif svar=='CHL':
-            lvar = dtmean.attrs['parameter']
-
-        datasetname = dtmean.attrs['title']
-
-        units = dtmean[nvar].attrs['units']    
-
-        ## Data information
-        print('\n\nRegion = '+str(lmei)+' - '+lmename)
-        print('Data = '+lvar)
-        print('Units = '+units)
-        print('Period = '+initial_date+' : '+final_date)
-        print('Dataset = '+datasetname)
-
-        # displaying time series data
-        plt.figure(figsize=(10,4))
-        plt.plot(dtmean.time,dtmean[nvar])
-        plt.grid(True)
-        plt.ylabel(svar+' ('+units+')')
-        plt.title(lmename+' '+svar+' values')
-        plt.autoscale(enable=True, axis='x', tight=True)
-        if (np.sign(dtmean[nvar].min())!=np.sign(dtmean[nvar].max())):
-            plt.axhline(color='k',zorder=0)
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_timeseries_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        
-
-        # display climatology
-        plt.figure(figsize=(5,4))
-        plt.plot(dtclim.month, dtclim[nvar],'+-',color='k')
-        plt.grid(True)
-        plt.ylabel(svar+' ('+units+')')
-        plt.xticks(range(1,13),['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],rotation=45)
-        plt.title(lmename+' '+svar+' climatology')
-        if (np.sign(dtclim[nvar].min())!=np.sign(dtclim[nvar].max())):
-            plt.axhline(color='k',zorder=0)
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_climatology_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        
-
-        ## display statistics
-        print('\nMean '+svar+' value = ', round(dtmean[nvar].values.mean(),2),units)
-        print('Median '+svar+' value = ', round(np.median(dtmean[nvar].values),2),units)
-        print(svar+' Standard deviation = ', round(dtmean[nvar].values.std(),2),units)
-        print('\n')
-        print('Maximum '+svar+' value = ', round(dtmean[nvar].values.max(),2),units)
-        print('Minimum '+svar+' value = ', round(dtmean[nvar].values.min(),2),units)
-        print('\n')
-        print('Maximum '+svar+' anomalies value = ', round(dtanom[nvar].values.max(),2),units)
-        print('Minimum '+svar+' anomalies value = ', round(dtanom[nvar].values.min(),2),units)
-
-        # display density plots
-        plt.figure(figsize=(10,4))
-        plt.subplot(1,2,1)
-        sns.distplot(dtmean[nvar], hist=True, kde=True, bins=30,
-                     kde_kws={'linewidth': 2})
-        plt.title(svar+' values density plot')
-        plt.grid(True)
-        plt.xlabel(svar+' ('+units+')')
-        plt.subplot(1,2,2)
-        sns.distplot(dtanom[nvar], hist=True, kde=True, bins=30,
-                     kde_kws={'linewidth': 2})
-        plt.title(svar+' anomalies density plot')
-        plt.grid(True)
-        plt.xlabel(svar+' ('+units+')')
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_densityplots_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        
-
-        # display anomalies
-        plt.figure(figsize=(12,4),dpi=180)
-        p=dtanom.where(dtanom>=0)
-        n=dtanom.where(dtanom<0)
-        plt.bar(p.time.values,p[nvar], width=30, color='darkred',alpha=0.8, edgecolor=None,zorder=2)
-        plt.bar(n.time.values,n[nvar], width=30, color='darkblue',alpha=0.8, edgecolor=None,zorder=3)
-        plt.grid(True,zorder=1)
-        plt.axhline(color='k',zorder=0)
-        plt.ylabel(svar+' ('+units+')')
-        plt.title(lmename+' '+svar+' anomalies')
-        plt.autoscale(enable=True, axis='x', tight=True)
-        # save anomalies
-        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.png')
-        plt.show()
-        print('Anomalies calculated based on the entire data period')
-        
-        # build data set and save
-        dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svar:dtanom[nvar].values}
-        df = pd.DataFrame(data=dta)
-        df.to_csv(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
+    # build data set and save
+    dta  ={'Year':pd.to_datetime(dtanom.time.values).year.values,'Month':pd.to_datetime(dtanom.time.values).month.values,svar:dtanom[var].values}
+    df = pd.DataFrame(data=dta)
+    df.to_csv(home_dir+'/User_Data_And_Figures/PICESregion'+str(lmei)+'_'+svar+'_anomalies_'+initial_date+'_'+final_date+'.csv')
         
