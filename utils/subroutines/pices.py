@@ -59,9 +59,9 @@ def get_filename(var):
     if (var=='chl') or (var==4):
         file=home_dir+'/utils/data/chl.mnmean.nc'
     if (var=='sla') or (var==5):
-        file=home_dir+'/utils/data/sla.mnmean_aviso.nc'
+        file=home_dir+'/utils/data/adt.mnmean_aviso.nc'  ### !!!! here
     if (var=='adt') or (var==6):
-        file=home_dir+'/utils/data/adt.mnmean_aviso.nc'
+        file=home_dir+'/utils/data/sla.mnmean_aviso.nc'  ### !!!! here
     #if (var=='current_oscar') or (var==7):
      #   file=home_dir+'/utils/data/cur.mnmean.nc'
     return file
@@ -214,9 +214,13 @@ def select_propervar(dtmean, dtclim, dtanom, var):
 def print_var_info(dtmean, var, lmei, lmename, initial_date, final_date):
     # short and long name for variable
     svar = var.upper()
-    if (svar=='SST') or (svar=='SLA') or (svar=='ADT'):
+    
+    if (svar=='SST'):
         lvar = dtmean.attrs['long_name']
-        units = dtmean.attrs['units']    
+        units = dtmean.attrs['units']
+    elif (svar=='SLA') or (svar=='ADT'):
+        lvar = dtmean.attrs['comment']
+        units = dtmean.attrs['geospatial_vertical_units']    
     elif svar=='CHL':
         lvar = dtmean.attrs['parameter']
         units = dtmean.attrs['units']    
@@ -242,7 +246,7 @@ def make_plot(plot_type, ds, ds2, var, svar, units, lmei, lmename, initial_date,
     import numpy as np
     import seaborn as sns
     import os
-    home_dir=os.getcwd()
+    home_dir=os.getcwd()   
     
     if plot_type == 'timeseries':
         plt.figure(figsize=(10,4))
@@ -251,9 +255,10 @@ def make_plot(plot_type, ds, ds2, var, svar, units, lmei, lmename, initial_date,
         plt.ylabel(svar+' ('+units+')')
         plt.title(lmename+' '+svar+' values')
         plt.autoscale(enable=True, axis='x', tight=True)
-        if (np.sign(ds.min())!=np.sign(ds.max())):
+        if (np.sign(ds[var].values.min()))!=(np.sign(ds[var].values.max())):
+            print('im here')
             plt.axhline(color='k',zorder=0)
-            plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+
+        plt.savefig(home_dir+'/User_Data_And_Figures/PICESregion'+
                         str(lmei)+'_'+svar+'_timeseries_'+
                         initial_date+'_'+final_date+'.png')
         plt.show()
