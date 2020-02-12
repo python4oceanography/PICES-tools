@@ -214,16 +214,20 @@ def select_propervar(dtmean, dtclim, dtanom, var):
 def print_var_info(dtmean, var, lmei, lmename, initial_date, final_date):
     # short and long name for variable
     svar = var.upper()
+    #print(dtmean.attrs)
     
     if (svar=='SST'):
-        lvar = dtmean.attrs['long_name']
-        units = dtmean.attrs['units']
+        print(dtmean)
+        lvar = dtmean.attrs['title']
+        #units = dtmean.attrs['units']
+        units = 'C'
     elif (svar=='SLA') or (svar=='ADT'):
         lvar = dtmean.attrs['comment']
         units = dtmean.attrs['geospatial_vertical_units']    
     elif svar=='CHL':
         lvar = dtmean.attrs['parameter']
-        units = dtmean.attrs['units']    
+        #units = dtmean.attrs['units']  
+        units = 'mg m-3'
     else:
         lvar = svar.replace('_',' ')
         svar = lvar
@@ -247,7 +251,7 @@ def make_plot(plot_type, ds, ds2, var, svar, units, lmei, lmename, initial_date,
     import seaborn as sns
     import os
     home_dir=os.getcwd()   
-    
+
     if plot_type == 'timeseries':
         plt.figure(figsize=(10,4))
         plt.plot(ds.time,ds[var])
@@ -347,6 +351,9 @@ def analyze_PICES_Region(region,var,initial_date,final_date):
     # print information
     svar, units = print_var_info(dtmean, var, lmei, lmename, initial_date, final_date)
 
+    if var=='chl':
+        var='CHL1_mean'
+        
     # displaying time series data
     make_plot('timeseries', dtmean, dtanom, var, svar, units, lmei, lmename, initial_date, final_date)
 
